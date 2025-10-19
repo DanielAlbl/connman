@@ -1,6 +1,6 @@
 use anyhow::Result;
-use log::info;
 use connman::{ManagerProxy, PasswordAgent, ServiceProxy};
+use log::info;
 use zbus::Connection;
 use zbus::zvariant::ObjectPath;
 
