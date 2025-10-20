@@ -6,4 +6,4 @@ pub mod technology;
 pub use agent::PasswordAgent;
 pub use manager::ManagerProxy;
 pub use service::ServiceProxy;
-pub use technology::TechnologyProxy;
+pub use technology::{TechnologyProxy, TechnologyType};

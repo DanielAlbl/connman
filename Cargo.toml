@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 log = "0.4"
+strum = { version = "0.27", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 zbus = "5"

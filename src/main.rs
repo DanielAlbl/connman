@@ -1,6 +1,5 @@
 use anyhow::Result;
-use connman::{ManagerProxy, PasswordAgent, ServiceProxy};
-use log::info;
+use connman::{ManagerProxy, PasswordAgent, ServiceProxy, TechnologyProxy, TechnologyType};
 use zbus::Connection;
 use zbus::zvariant::ObjectPath;
 
@@ -14,7 +13,7 @@ async fn connect_to_wifi(connection: &Connection, ssid: &str, password: &str) ->
     // Serve the agent on the connection
     connection.object_server().at(&agent_path, agent).await?;
 
-    info!("Registering agent...");
+    println!("Registering agent...");
     manager.register_agent(&agent_path).await?;
 
     // Get all services
@@ -24,22 +23,22 @@ async fn connect_to_wifi(connection: &Connection, ssid: &str, password: &str) ->
     let some_ssid = Some(ssid.to_string());
     for (service_path, properties) in services {
         if properties.get("Name").map(|name| name.to_string()) == some_ssid {
-            info!("Found network: {}", ssid);
+            println!("Found network: {}", ssid);
 
             // Create a service proxy for this network
             let service = ServiceProxy::new_from_path(service_path, connection).await?;
 
             // Remove any previous configuration to ensure fresh connection
-            info!("Removing any previous configuration...");
+            println!("Removing any previous configuration...");
             let _ = service.remove().await; // Ignore errors if not configured yet
 
-            info!("Connecting to {}...", ssid);
+            println!("Connecting to {}...", ssid);
             service.connect().await?;
-            info!("Successfully connected to {}", ssid);
+            println!("Successfully connected to {}", ssid);
 
             // Unregister the agent
             manager.unregister_agent(&agent_path).await?;
-            info!("Agent unregistered");
+            println!("Agent unregistered");
 
             return Ok(());
         }
@@ -52,12 +51,13 @@ async fn connect_to_wifi(connection: &Connection, ssid: &str, password: &str) ->
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let connection = Connection::system().await?;
-    let ssid = "Mouse_5";
-    let password = "1234567890";
-    connect_to_wifi(&connection, ssid, password).await?;
-
-    info!("ConnMan is running!");
+    let connection = &Connection::system().await?;
+    let manager = &ManagerProxy::new(connection).await?;
+    let wifi = TechnologyProxy::get_technology(connection, manager, TechnologyType::WiFi)
+        .await?
+        .unwrap();
+    wifi.scan().await?;
+    println!("ConnMan is running!");
 
     Ok(())
 }

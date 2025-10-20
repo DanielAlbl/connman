@@ -1,6 +1,20 @@
+use crate::ManagerProxy;
 use std::collections::HashMap;
+use strum::AsRefStr;
 use zbus::proxy;
 use zbus::zvariant::{OwnedValue, Value};
+
+/// ConnMan technology types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsRefStr)]
+#[strum(serialize_all = "lowercase")]
+pub enum TechnologyType {
+    Ethernet,
+    WiFi,
+    Bluetooth,
+    Cellular,
+    P2P,
+    Gadget,
+}
 
 #[proxy(interface = "net.connman.Technology", default_service = "net.connman")]
 pub trait Technology {
@@ -25,5 +39,24 @@ impl TechnologyProxy<'_> {
             .path(technology_path)?
             .build()
             .await
+    }
+
+    pub async fn get_technology<'a>(
+        connection: &'a zbus::Connection,
+        manager: &ManagerProxy<'a>,
+        technology_type: TechnologyType,
+    ) -> zbus::Result<Option<TechnologyProxy<'a>>> {
+        let technologies = manager.get_technologies().await?;
+        let technology = technologies.into_iter().find(|(_, x)| {
+            x.get("Type").and_then(|t| t.downcast_ref::<&str>().ok())
+                == Some(technology_type.as_ref())
+        });
+        if let Some((path, _)) = technology {
+            Ok(Some(
+                TechnologyProxy::new_from_path(path, connection).await?,
+            ))
+        } else {
+            Ok(None)
+        }
     }
 }
